@@ -15,12 +15,14 @@ class WorkTask extends Model
     protected $fillable = [
         'call_id',
         'resolution_type_id',
+        'work_started_at',
         'work_completed_at',
     ];
 
     protected function casts(): array
     {
         return [
+            'work_started_at' => 'datetime',
             'work_completed_at' => 'datetime',
         ];
     }

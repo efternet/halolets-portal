@@ -5,8 +5,9 @@ namespace App\Http\Controllers\Portal\Billing\Processing;
 use App\Http\Controllers\Concerns\ExportsCsv;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdatePaymentRequest;
+use App\Models\FranchisePayment;
+use App\Models\VendorPayment;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 
 class BillingController extends Controller
 {
@@ -23,7 +24,8 @@ class BillingController extends Controller
                           ? request('sort') : 'vp.id';
         $direction      = request('direction') === 'desc' ? 'desc' : 'asc';
 
-        $query = DB::table('vendor_payments as vp')
+        $query = VendorPayment::query()
+            ->from('vendor_payments as vp')
             ->leftJoin('franchise_payments as fp', 'vp.sales_id', '=', 'fp.sales_id')
             ->select('vp.id', 'vp.sales_id', 'vp.vendor_id', 'vp.amount', 'vp.currency', 'vp.status', 'vp.paid_date', 'fp.payment_date')
             ->when($search, fn ($q) => $q->where(fn ($q) => $q
@@ -68,23 +70,21 @@ class BillingController extends Controller
             default                                   => 'Pending',
         };
 
-        DB::table('vendor_payments')
+        VendorPayment::query()
             ->where('id', $vendorPaymentId)
             ->update([
-                'paid_date'  => $paidDate ?: null,
-                'status'     => $status,
-                'updated_at' => now(),
+                'paid_date' => $paidDate ?: null,
+                'status'    => $status,
             ]);
 
-        $salesId = DB::table('vendor_payments')
+        $salesId = VendorPayment::query()
             ->where('id', $vendorPaymentId)
             ->value('sales_id');
 
-        DB::table('franchise_payments')
+        FranchisePayment::query()
             ->where('sales_id', $salesId)
             ->update([
                 'payment_date' => $paymentDate ?: null,
-                'updated_at'   => now(),
             ]);
 
         return response()->json([

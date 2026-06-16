@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\ProductList;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class ProductListSeeder extends Seeder
 {
@@ -42,17 +42,17 @@ class ProductListSeeder extends Seeder
             ];
 
             if (count($chunk) === 500) {
-                DB::table('product_list')->insertOrIgnore($chunk);
+                ProductList::query()->insertOrIgnore($chunk);
                 $chunk = [];
             }
         }
 
         if (!empty($chunk)) {
-            DB::table('product_list')->insertOrIgnore($chunk);
+            ProductList::query()->insertOrIgnore($chunk);
         }
 
         fclose($handle);
-        $this->command->info('product_list seeded: ' . DB::table('product_list')->count() . ' records.');
+        $this->command->info('product_list seeded: ' . ProductList::query()->count() . ' records.');
     }
 
     private function parseDate(string $value): ?string

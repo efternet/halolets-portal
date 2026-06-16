@@ -2,9 +2,11 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
+use App\Models\Business;
+use App\Models\BusinessCustomer;
+use App\Models\Customer;
 use Carbon\Carbon;
+use Illuminate\Database\Seeder;
 
 class BusinessAccountsSeeder extends Seeder
 {
@@ -46,38 +48,42 @@ class BusinessAccountsSeeder extends Seeder
 
         fclose($handle);
 
-        // Insert businesses and build name -> id map
         $now = now();
         $businessMap = [];
         foreach (array_values($businesses) as $name) {
-            DB::table('businesses')->insertOrIgnore([
+            Business::query()->insertOrIgnore([
                 'name'       => $name,
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
-            $businessMap[$name] = DB::table('businesses')->where('name', $name)->value('id');
+            $businessMap[$name] = Business::query()->where('name', $name)->value('id');
         }
 
-        // Insert business customers in chunks
-        $customerRows = array_map(function ($c) use ($businessMap) {
-            return [
-                'id'               => $c['id'],
-                'business_id'      => $businessMap[$c['business_name']],
-                'first_name'       => $c['first_name'],
-                'surname'          => $c['surname'],
-                'email'            => $c['email'],
-                'country'          => $c['country'],
-                'city'             => $c['city'],
-                'terms_accepted'   => $c['terms_accepted'],
-                'contact_accepted' => $c['contact_accepted'],
-                'last_contacted'   => $c['last_contacted'],
-                'created_at'       => $c['created_at'],
-                'updated_at'       => $c['updated_at'],
-            ];
-        }, $customers);
+        $customerRows = array_map(fn ($c) => [
+            'id'               => $c['id'],
+            'first_name'       => $c['first_name'],
+            'surname'          => $c['surname'],
+            'email'            => $c['email'],
+            'country'          => $c['country'],
+            'city'             => $c['city'],
+            'terms_accepted'   => $c['terms_accepted'],
+            'contact_accepted' => $c['contact_accepted'],
+            'last_contacted'   => $c['last_contacted'],
+            'created_at'       => $c['created_at'],
+            'updated_at'       => $c['updated_at'],
+        ], $customers);
 
         foreach (array_chunk($customerRows, 100) as $chunk) {
-            DB::table('business_customers')->insertOrIgnore($chunk);
+            Customer::query()->insertOrIgnore($chunk);
+        }
+
+        $pivotRows = array_map(fn ($c) => [
+            'business_id' => $businessMap[$c['business_name']],
+            'customer_id' => $c['id'],
+        ], $customers);
+
+        foreach (array_chunk($pivotRows, 100) as $chunk) {
+            BusinessCustomer::query()->insertOrIgnore($chunk);
         }
 
         $this->command->info('Imported ' . count($customerRows) . ' business customers and ' . count($businessMap) . ' businesses.');

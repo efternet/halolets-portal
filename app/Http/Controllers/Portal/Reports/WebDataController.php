@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Portal\Reports;
 
 use App\Http\Controllers\Concerns\ExportsCsv;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\DB;
+use App\Models\WebSale;
+use App\Models\WebSalesSearchQuery;
+use App\Models\WebSearchFailure;
 
 class WebDataController extends Controller
 {
@@ -25,10 +27,10 @@ class WebDataController extends Controller
                         ? request('sort') : 'id';
         $direction    = request('direction') === 'asc' ? 'asc' : 'desc';
 
-        $failureReasons = DB::table('web_sales_search_queries')
+        $failureReasons = WebSalesSearchQuery::query()
             ->whereNotNull('reason_for_failure')->distinct()->orderBy('reason_for_failure')->pluck('reason_for_failure');
 
-        $query = DB::table('web_sales_search_queries')
+        $query = WebSalesSearchQuery::query()
             ->when($search, fn ($q) => $q->where(fn ($q) => $q
                 ->where('id',                 'like', "%{$search}%")
                 ->orWhere('user_ip',          'like', "%{$search}%")
@@ -79,7 +81,8 @@ class WebDataController extends Controller
         $sort      = in_array(request('sort'), ['id', 'total_cost', 'sold_at']) ? request('sort') : 'sold_at';
         $direction = request('direction') === 'asc' ? 'asc' : 'desc';
 
-        $query = DB::table('web_sales as ws')
+        $query = WebSale::query()
+            ->from('web_sales as ws')
             ->leftJoin('web_sales_search_queries as q', 'ws.query_id', '=', 'q.id')
             ->select('ws.id', 'ws.query_id', 'ws.total_cost', 'ws.sold_at',
                      'q.user_id', 'q.user_ip', 'q.product_id')
@@ -125,10 +128,10 @@ class WebDataController extends Controller
                         ? request('sort') : 'failed_on';
         $direction    = request('direction') === 'asc' ? 'asc' : 'desc';
 
-        $failureReasons = DB::table('web_search_failures')
+        $failureReasons = WebSearchFailure::query()
             ->whereNotNull('reason')->distinct()->orderBy('reason')->pluck('reason');
 
-        $query = DB::table('web_search_failures')
+        $query = WebSearchFailure::query()
             ->when($search, fn ($q) => $q->where(fn ($q) => $q
                 ->where('id',            'like', "%{$search}%")
                 ->orWhere('original_hash','like', "%{$search}%")

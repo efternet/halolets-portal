@@ -6,6 +6,8 @@ use App\Http\Controllers\Concerns\ExportsCsv;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreResolutionTypeRequest;
 use App\Http\Requests\UpdateResolutionTypeRequest;
+use App\Models\ResolutionType;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
@@ -19,7 +21,9 @@ class ResolutionTypeController extends Controller
         $sort      = in_array(request('sort'), ['rt.id', 'rt.name', 'task_count']) ? request('sort') : 'rt.name';
         $direction = request('direction') === 'desc' ? 'desc' : 'asc';
 
-        $query = DB::table('resolution_types as rt')
+        $query = ResolutionType::query()
+            ->withoutGlobalScope(SoftDeletingScope::class)
+            ->from('resolution_types as rt')
             ->whereNull('rt.deleted_at')
             ->leftJoin('work_tasks as wt', function ($join) {
                 $join->on('rt.id', '=', 'wt.resolution_type_id')->whereNull('wt.deleted_at');
@@ -50,26 +54,23 @@ class ResolutionTypeController extends Controller
 
     public function store(StoreResolutionTypeRequest $request): JsonResponse
     {
-        $id = DB::table('resolution_types')->insertGetId([
+        $type = ResolutionType::create([
             'name'        => $request->validated('name'),
             'description' => $request->validated('description') ?: null,
-            'created_at'  => now(),
-            'updated_at'  => now(),
         ]);
 
-        return response()->json(['success' => true, 'id' => $id]);
+        return response()->json(['success' => true, 'id' => $type->id]);
     }
 
     public function destroy(int $id): JsonResponse
     {
-        $affected = DB::table('resolution_types')
-            ->whereNull('deleted_at')
-            ->where('id', $id)
-            ->update(['deleted_at' => now()]);
+        $type = ResolutionType::query()->find($id);
 
-        if (! $affected) {
+        if (! $type) {
             return response()->json(['error' => 'Resolution type not found.'], 404);
         }
+
+        $type->delete();
 
         return response()->json(['success' => true]);
     }
@@ -80,12 +81,11 @@ class ResolutionTypeController extends Controller
         $name        = $request->validated('name');
         $description = $request->validated('description');
 
-        DB::table('resolution_types')
+        ResolutionType::query()
             ->where('id', $id)
             ->update([
                 'name'        => $name,
                 'description' => $description ?: null,
-                'updated_at'  => now(),
             ]);
 
         return response()->json(['success' => true]);

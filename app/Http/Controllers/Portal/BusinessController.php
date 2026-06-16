@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Portal;
 
 use App\Http\Controllers\Concerns\ExportsCsv;
 use App\Http\Controllers\Controller;
+use App\Models\Business;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
@@ -18,7 +19,8 @@ class BusinessController extends Controller
         $sort      = in_array(request('sort'), ['b.id', 'b.name', 'customer_count']) ? request('sort') : 'b.id';
         $direction = request('direction') === 'desc' ? 'desc' : 'asc';
 
-        $query = DB::table('businesses as b')
+        $query = Business::query()
+            ->from('businesses as b')
             ->leftJoin('business_customer as bc', 'b.id', '=', 'bc.business_id')
             ->select('b.*', DB::raw('COUNT(bc.customer_id) as customer_count'))
             ->when($search, fn ($q) => $q->where(fn ($q) => $q
@@ -52,11 +54,10 @@ class BusinessController extends Controller
             return response()->json(['error' => 'Name is required.'], 422);
         }
 
-        DB::table('businesses')
+        Business::query()
             ->where('id', $id)
-            ->update(['name' => $name, 'updated_at' => now()]);
+            ->update(['name' => $name]);
 
-        // Keep business_customers in sync if you later add a denormalised name column
         return response()->json(['success' => true]);
     }
 }

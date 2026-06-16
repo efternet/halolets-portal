@@ -2,16 +2,16 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\EndpointActivationStatus;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 
 class CheckEndpointActive
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $endpoint = DB::table('endpoint_activation_status')
+        $endpoint = EndpointActivationStatus::query()
             ->where('method', strtoupper($request->method()))
             ->where('path', $request->path())
             ->first();

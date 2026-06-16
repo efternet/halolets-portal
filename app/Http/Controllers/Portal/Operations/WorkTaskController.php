@@ -6,8 +6,10 @@ use App\Http\Controllers\Concerns\ExportsCsv;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreWorkTaskRequest;
 use App\Http\Requests\UpdateWorkTaskRequest;
+use App\Models\ResolutionType;
+use App\Models\WorkTask;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 
 class WorkTaskController extends Controller
 {
@@ -25,9 +27,11 @@ class WorkTaskController extends Controller
                             ? request('sort') : 'id';
         $direction        = request('direction') === 'asc' ? 'asc' : 'desc';
 
-        $resolutionTypes = DB::table('resolution_types')->whereNull('deleted_at')->orderBy('name')->get();
+        $resolutionTypes = ResolutionType::query()->orderBy('name')->get();
 
-        $query = DB::table('work_tasks as wt')
+        $query = WorkTask::query()
+            ->withoutGlobalScope(SoftDeletingScope::class)
+            ->from('work_tasks as wt')
             ->join('calls as c', 'wt.call_id', '=', 'c.id')
             ->leftJoin('resolution_types as rt', 'wt.resolution_type_id', '=', 'rt.id')
             ->whereNull('wt.deleted_at')
@@ -70,30 +74,27 @@ class WorkTaskController extends Controller
 
     public function destroy(int $id): JsonResponse
     {
-        $affected = DB::table('work_tasks')
-            ->whereNull('deleted_at')
-            ->where('id', $id)
-            ->update(['deleted_at' => now()]);
+        $task = WorkTask::query()->find($id);
 
-        if (! $affected) {
+        if (! $task) {
             return response()->json(['error' => 'Task not found.'], 404);
         }
+
+        $task->delete();
 
         return response()->json(['success' => true]);
     }
 
     public function store(StoreWorkTaskRequest $request): JsonResponse
     {
-        $id = DB::table('work_tasks')->insertGetId([
+        $task = WorkTask::create([
             'call_id'            => $request->validated('call_id'),
             'resolution_type_id' => $request->validated('resolution_type_id') ?: null,
             'work_started_at'    => $request->validated('work_started_at') ?: null,
             'work_completed_at'  => $request->validated('work_completed_at') ?: null,
-            'created_at'         => now(),
-            'updated_at'         => now(),
         ]);
 
-        return response()->json(['success' => true, 'id' => $id]);
+        return response()->json(['success' => true, 'id' => $task->id]);
     }
 
     public function update(UpdateWorkTaskRequest $request): JsonResponse
@@ -103,18 +104,17 @@ class WorkTaskController extends Controller
         $workStartedAt    = $request->validated('work_started_at');
         $workCompletedAt  = $request->validated('work_completed_at');
 
-        DB::table('work_tasks')
+        WorkTask::query()
             ->where('id', $id)
             ->update([
                 'call_id'            => $request->validated('call_id'),
                 'resolution_type_id' => $resolutionTypeId ?: null,
                 'work_started_at'    => $workStartedAt ?: null,
                 'work_completed_at'  => $workCompletedAt ?: null,
-                'updated_at'         => now(),
             ]);
 
         $resolutionName = $resolutionTypeId
-            ? DB::table('resolution_types')->where('id', $resolutionTypeId)->value('name')
+            ? ResolutionType::query()->where('id', $resolutionTypeId)->value('name')
             : null;
 
         return response()->json(['success' => true, 'resolution_type_name' => $resolutionName]);

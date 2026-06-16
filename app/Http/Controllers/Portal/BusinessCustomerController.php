@@ -4,8 +4,9 @@ namespace App\Http\Controllers\Portal;
 
 use App\Http\Controllers\Concerns\ExportsCsv;
 use App\Http\Controllers\Controller;
+use App\Models\Business;
+use App\Models\Customer;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 
 class BusinessCustomerController extends Controller
 {
@@ -20,11 +21,12 @@ class BusinessCustomerController extends Controller
                           ? request('sort') : 'c.id';
         $direction      = request('direction') === 'desc' ? 'desc' : 'asc';
 
-        $businesses = DB::table('businesses')->orderBy('name')->get();
+        $businesses = Business::query()->orderBy('name')->get();
 
-        $query = DB::table('customers as c')
+        $query = Customer::query()
+            ->from('customers as c')
             ->join('business_customer as bc', 'c.id', '=', 'bc.customer_id')
-            ->join('businesses as b',         'bc.business_id', '=', 'b.id')
+            ->join('businesses as b', 'bc.business_id', '=', 'b.id')
             ->select('c.*', 'b.id as business_id', 'b.name as business_name')
             ->when($search, fn ($q) => $q->where(fn ($q) => $q
                 ->where('c.id',         'like', "%{$search}%")
@@ -67,9 +69,7 @@ class BusinessCustomerController extends Controller
             $data['last_contacted'] = $data['last_contacted'] ?: null;
         }
 
-        $data['updated_at'] = now();
-
-        DB::table('customers')->where('id', $id)->update($data);
+        Customer::query()->where('id', $id)->update($data);
 
         return response()->json(['success' => true]);
     }

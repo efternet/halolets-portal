@@ -26,7 +26,7 @@ function abSortIcon(string $col, string $cur, string $dir): string {
     </div>
     <div class="col-sm-3">
         <div class="card shadow-sm text-center py-3">
-            <div class="fs-2 fw-bold text-success">{{ DB::table('ab_tests')->where('active', 1)->count() }}</div>
+            <div class="fs-2 fw-bold text-success">{{ $activeTestsCount }}</div>
             <div class="text-muted small">Active Tests</div>
         </div>
     </div>
@@ -38,7 +38,7 @@ function abSortIcon(string $col, string $cur, string $dir): string {
     </div>
     <div class="col-sm-3">
         <div class="card shadow-sm text-center py-3">
-            <div class="fs-2 fw-bold text-secondary">{{ number_format(DB::table('ab_visits')->count()) }}</div>
+            <div class="fs-2 fw-bold text-secondary">{{ number_format($totalVisitsCount) }}</div>
             <div class="text-muted small">Total Visits Logged</div>
         </div>
     </div>
@@ -208,7 +208,7 @@ function abSortIcon(string $col, string $cur, string $dir): string {
                 placeholder="IP or test name..." value="{{ $visSearch ?? '' }}">
             <select name="vis_test" class="form-select form-select-sm" style="width:220px;">
                 <option value="">All tests</option>
-                @foreach(DB::table('ab_tests')->orderBy('id')->get() as $t)
+                @foreach($allTests as $t)
                 <option value="{{ $t->id }}" {{ ($visTest ?? '') == $t->id ? 'selected' : '' }}>{{ $t->id }} - {{ Str::limit($t->name, 30) }}</option>
                 @endforeach
             </select>

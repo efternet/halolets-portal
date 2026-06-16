@@ -6,8 +6,8 @@ use App\Http\Controllers\Concerns\ExportsCsv;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreCallRequest;
 use App\Http\Requests\UpdateCallRequest;
+use App\Models\Call;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 
 class CallController extends Controller
 {
@@ -24,7 +24,8 @@ class CallController extends Controller
         $sort           = in_array(request('sort'), ['id', 'stage', 'created_at', 'work_completed_at']) ? request('sort') : 'id';
         $direction      = request('direction') === 'asc' ? 'asc' : 'desc';
 
-        $query = DB::table('calls as c')
+        $query = Call::query()
+            ->from('calls as c')
             ->leftJoin('work_tasks as wt', function ($join) {
                 $join->on('c.id', '=', 'wt.call_id')->whereNull('wt.deleted_at');
             })
@@ -71,7 +72,7 @@ class CallController extends Controller
     {
         $q = trim(request('q', ''));
 
-        $results = DB::table('calls')
+        $results = Call::query()
             ->when($q !== '', fn ($query) => $query->where(fn ($query) => $query
                 ->where('id', 'like', "%{$q}%")
                 ->orWhere('notes', 'like', "%{$q}%")
@@ -86,14 +87,12 @@ class CallController extends Controller
 
     public function store(StoreCallRequest $request): JsonResponse
     {
-        $id = DB::table('calls')->insertGetId([
-            'stage'      => $request->validated('stage'),
-            'notes'      => $request->validated('notes') ?: null,
-            'created_at' => now(),
-            'updated_at' => now(),
+        $call = Call::create([
+            'stage' => $request->validated('stage'),
+            'notes' => $request->validated('notes') ?: null,
         ]);
 
-        return response()->json(['success' => true, 'id' => $id]);
+        return response()->json(['success' => true, 'id' => $call->id]);
     }
 
     public function update(UpdateCallRequest $request): JsonResponse
@@ -102,12 +101,11 @@ class CallController extends Controller
         $stage = $request->validated('stage');
         $notes = $request->validated('notes');
 
-        DB::table('calls')
+        Call::query()
             ->where('id', $id)
             ->update([
-                'stage'      => $stage,
-                'notes'      => $notes ?: null,
-                'updated_at' => now(),
+                'stage' => $stage,
+                'notes' => $notes ?: null,
             ]);
 
         return response()->json(['success' => true, 'stage' => $stage]);

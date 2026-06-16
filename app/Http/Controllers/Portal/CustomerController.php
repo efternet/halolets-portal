@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Portal;
 use App\Http\Controllers\Concerns\ExportsCsv;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateCustomerRequest;
+use App\Models\Customer;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 
 class CustomerController extends Controller
 {
@@ -24,9 +24,9 @@ class CustomerController extends Controller
                              ? request('sort') : 'id';
         $direction         = request('direction') === 'asc' ? 'asc' : 'desc';
 
-        $countries = DB::table('customers')->whereNotNull('country')->distinct()->orderBy('country')->pluck('country');
+        $countries = Customer::query()->whereNotNull('country')->distinct()->orderBy('country')->pluck('country');
 
-        $query = DB::table('customers')
+        $query = Customer::query()
             ->when($search, fn ($q) => $q->where(fn ($q) => $q
                 ->where('id',         'like', "%{$search}%")
                 ->orWhere('first_name','like', "%{$search}%")
@@ -64,7 +64,7 @@ class CustomerController extends Controller
 
     public function update(UpdateCustomerRequest $request): JsonResponse
     {
-        DB::table('customers')
+        Customer::query()
             ->where('id', $request->validated('id'))
             ->update([
                 'first_name'       => $request->validated('first_name'),
@@ -74,7 +74,6 @@ class CustomerController extends Controller
                 'city'             => $request->validated('city') ?: null,
                 'contact_accepted' => $request->validated('contact_accepted') ? 1 : 0,
                 'last_contacted'   => $request->validated('last_contacted') ?: null,
-                'updated_at'       => now(),
             ]);
 
         return response()->json(['success' => true]);

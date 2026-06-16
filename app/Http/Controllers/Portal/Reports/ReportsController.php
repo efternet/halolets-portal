@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Portal\Reports;
 
 use App\Http\Controllers\Concerns\ExportsCsv;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\DB;
+use App\Models\FranchiseDispatchReport;
+use App\Models\FranchiseReport;
+use App\Models\VendorReport;
+use App\Models\VendorSale;
 
 class ReportsController extends Controller
 {
@@ -20,9 +23,9 @@ class ReportsController extends Controller
                           ? request('sort') : 'dispatch_report_date';
         $direction      = request('direction') === 'asc' ? 'asc' : 'desc';
 
-        $currencies = DB::table('franchise_dispatch_reports')->distinct()->orderBy('currency')->pluck('currency');
+        $currencies = FranchiseDispatchReport::query()->distinct()->orderBy('currency')->pluck('currency');
 
-        $query = DB::table('franchise_dispatch_reports')
+        $query = FranchiseDispatchReport::query()
             ->when($search, fn ($q) => $q->where(fn ($q) => $q
                 ->where('id',            'like', "%{$search}%")
                 ->orWhere('filename',    'like', "%{$search}%")
@@ -58,7 +61,7 @@ class ReportsController extends Controller
         $sort      = in_array(request('sort'), ['id', 'created_at', 'updated_at']) ? request('sort') : 'id';
         $direction = request('direction') === 'desc' ? 'desc' : 'asc';
 
-        $query = DB::table('franchise_reports')
+        $query = FranchiseReport::query()
             ->when($search, fn ($q) => $q->where(fn ($q) => $q
                 ->where('id',        'like', "%{$search}%")
                 ->orWhere('filename','like', "%{$search}%")
@@ -93,9 +96,9 @@ class ReportsController extends Controller
                         ? request('sort') : 'reported_on';
         $direction    = request('direction') === 'asc' ? 'asc' : 'desc';
 
-        $statuses = DB::table('vendor_reports')->whereNotNull('report_status')->distinct()->orderBy('report_status')->pluck('report_status');
+        $statuses = VendorReport::query()->whereNotNull('report_status')->distinct()->orderBy('report_status')->pluck('report_status');
 
-        $query = DB::table('vendor_reports')
+        $query = VendorReport::query()
             ->when($search, fn ($q) => $q->where(fn ($q) => $q
                 ->where('id',             'like', "%{$search}%")
                 ->orWhere('filename',     'like', "%{$search}%")
@@ -134,9 +137,10 @@ class ReportsController extends Controller
                           ? request('sort') : 'vs.sales_date';
         $direction      = request('direction') === 'asc' ? 'asc' : 'desc';
 
-        $currencies = DB::table('vendor_sales')->distinct()->orderBy('currency')->pluck('currency');
+        $currencies = VendorSale::query()->distinct()->orderBy('currency')->pluck('currency');
 
-        $query = DB::table('vendor_sales as vs')
+        $query = VendorSale::query()
+            ->from('vendor_sales as vs')
             ->leftJoin('places as p', 'vs.place_id', '=', 'p.id')
             ->select('vs.id', 'vs.sales_date', 'vs.date_out', 'vs.date_in', 'vs.customer', 'vs.reference', 'vs.regulatory_code', 'vs.amount', 'vs.currency', 'p.city')
             ->when($search, fn ($q) => $q->where(fn ($q) => $q

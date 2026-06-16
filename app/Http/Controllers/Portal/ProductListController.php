@@ -6,8 +6,9 @@ use App\Http\Controllers\Concerns\ExportsCsv;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
+use App\Models\ProductCategory;
+use App\Models\ProductList;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 
 class ProductListController extends Controller
 {
@@ -17,12 +18,13 @@ class ProductListController extends Controller
     {
         $search         = request('search');
         $filterCategory = request('category_id');
-        $categories     = DB::table('product_categories')->orderBy('name')->get();
+        $categories     = ProductCategory::query()->orderBy('name')->get();
         $sort           = in_array(request('sort'), ['p.id', 'p.product_name', 'pc.name', 'p.acquisition_date', 'p.warranty_expiry'])
                           ? request('sort') : 'p.id';
         $direction      = request('direction') === 'asc' ? 'asc' : 'desc';
 
-        $query = DB::table('product_list as p')
+        $query = ProductList::query()
+            ->from('product_list as p')
             ->leftJoin('product_categories as pc', 'p.category_id', '=', 'pc.id')
             ->select('p.*', 'pc.name as category_name')
             ->when($search, fn ($q) => $q->where(fn ($q) => $q
@@ -43,7 +45,7 @@ class ProductListController extends Controller
             return $this->streamCsv('product-list.csv',
                 ['ID', 'Category', 'Product Name', 'Brand', 'Model', 'Serial No', 'Asset Tag', 'Batch No', 'Purchase Order', 'Rental SKU', 'Supplier', 'Grade', 'Acquired', 'Warranty Expiry', 'Notes'],
                 $query->get(),
-                fn ($r) => [$r->id, $r->category_name, $r->product_name, $r->brand, $r->model, $r->serial_number, $r->asset_tag, $r->batch_no, $r->purchase_order, $r->rental_sku, $r->supplier, $r->grade, $r->acquisition_date, $r->warranty_expiry, $r->notes]
+                fn ($r) => [$r->id, $r->category_name, $r->product_name, $r->brand, $r->model, $r->serial_number, $r->asset_tag, $r->batch_no, $r->purchase_order, $r->rental_sku, $r->supplier, $r->condition_grade, $r->acquisition_date, $r->warranty_expiry, $r->notes]
             );
         }
 
@@ -56,12 +58,9 @@ class ProductListController extends Controller
 
     public function store(StoreProductRequest $request): JsonResponse
     {
-        $id = DB::table('product_list')->insertGetId(array_merge(
-            $request->validated(),
-            ['created_at' => now(), 'updated_at' => now()]
-        ));
+        $product = ProductList::create($request->validated());
 
-        return response()->json(['success' => true, 'id' => $id]);
+        return response()->json(['success' => true, 'id' => $product->id]);
     }
 
     public function update(UpdateProductRequest $request): JsonResponse
@@ -70,9 +69,7 @@ class ProductListController extends Controller
         $id   = $data['id'];
         unset($data['id']);
 
-        DB::table('product_list')
-            ->where('id', $id)
-            ->update(array_merge($data, ['updated_at' => now()]));
+        ProductList::query()->where('id', $id)->update($data);
 
         return response()->json(['success' => true]);
     }

@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Portal;
 
 use App\Http\Controllers\Controller;
+use App\Models\EndpointActivationStatus;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class EndpointController extends Controller
 {
@@ -13,7 +13,7 @@ class EndpointController extends Controller
     {
         $search = request('search');
 
-        $endpoints = DB::table('endpoint_activation_status')
+        $endpoints = EndpointActivationStatus::query()
             ->when($search, fn ($q) => $q->where(fn ($q) => $q
                 ->where('name', 'like', "%{$search}%")
                 ->orWhere('path', 'like', "%{$search}%")
@@ -30,7 +30,7 @@ class EndpointController extends Controller
     {
         $id = $request->validate(['id' => ['required', 'integer']])['id'];
 
-        $endpoint = DB::table('endpoint_activation_status')->where('id', $id)->first();
+        $endpoint = EndpointActivationStatus::query()->find($id);
 
         if (! $endpoint) {
             return response()->json(['error' => 'Endpoint not found.'], 404);
@@ -38,12 +38,7 @@ class EndpointController extends Controller
 
         $newStatus = ! $endpoint->is_active;
 
-        DB::table('endpoint_activation_status')
-            ->where('id', $id)
-            ->update([
-                'is_active'  => $newStatus,
-                'updated_at' => now(),
-            ]);
+        $endpoint->update(['is_active' => $newStatus]);
 
         return response()->json([
             'success'   => true,

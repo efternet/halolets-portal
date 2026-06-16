@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Portal\Billing\Processing;
 use App\Http\Controllers\Concerns\ExportsCsv;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateVendorDeficitRequest;
+use App\Models\VendorDeficit;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 
 class VendorDeficitController extends Controller
 {
@@ -22,7 +22,7 @@ class VendorDeficitController extends Controller
                         ? request('sort') : 'id';
         $direction    = request('direction') === 'desc' ? 'desc' : 'asc';
 
-        $query = DB::table('vendor_deficits')
+        $query = VendorDeficit::query()
             ->when($search, fn ($q) => $q->where(fn ($q) => $q
                 ->where('id',        'like', "%{$search}%")
                 ->orWhere('sales_id','like', "%{$search}%")
@@ -56,14 +56,13 @@ class VendorDeficitController extends Controller
         $paymentDueBy  = $request->validated('payment_due_by');
         $status        = $request->validated('status');
 
-        DB::table('vendor_deficits')
+        VendorDeficit::query()
             ->where('id', $id)
             ->update([
                 'date'               => $date ?: null,
                 'payment_due_by'     => $paymentDueBy ?: null,
                 'status'             => $status,
                 'last_status_update' => now()->toDateString(),
-                'updated_at'         => now(),
             ]);
 
         return response()->json([

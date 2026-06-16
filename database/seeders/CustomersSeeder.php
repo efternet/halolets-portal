@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\Customer;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class CustomersSeeder extends Seeder
 {
@@ -46,7 +46,7 @@ class CustomersSeeder extends Seeder
         fclose($handle);
 
         foreach (array_chunk($rows, 100) as $chunk) {
-            DB::table('customers')->insertOrIgnore($chunk);
+            Customer::query()->insertOrIgnore($chunk);
         }
 
         $this->command->info('Imported ' . count($rows) . ' customers.');

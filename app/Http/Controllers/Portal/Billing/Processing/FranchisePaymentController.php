@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Portal\Billing\Processing;
 use App\Http\Controllers\Concerns\ExportsCsv;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateFranchisePaymentRequest;
+use App\Models\FranchisePayment;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 
 class FranchisePaymentController extends Controller
 {
@@ -23,7 +23,7 @@ class FranchisePaymentController extends Controller
                          ? request('sort') : 'id';
         $direction     = request('direction') === 'desc' ? 'desc' : 'asc';
 
-        $query = DB::table('franchise_payments')
+        $query = FranchisePayment::query()
             ->when($search, fn ($q) => $q->where(fn ($q) => $q
                 ->where('id',                  'like', "%{$search}%")
                 ->orWhere('sales_id',           'like', "%{$search}%")
@@ -58,13 +58,12 @@ class FranchisePaymentController extends Controller
         $requestedOn  = $request->validated('requested_on');
         $paymentDate  = $request->validated('payment_date');
 
-        DB::table('franchise_payments')
+        FranchisePayment::query()
             ->where('id', $id)
             ->update([
-                'requested_on'  => $requestedOn ?: null,
-                'payment_date'  => $paymentDate ?: null,
+                'requested_on'   => $requestedOn ?: null,
+                'payment_date'   => $paymentDate ?: null,
                 'last_processed' => now()->toDateString(),
-                'updated_at'    => now(),
             ]);
 
         return response()->json(['success' => true]);

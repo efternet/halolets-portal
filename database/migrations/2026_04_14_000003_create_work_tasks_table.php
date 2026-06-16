@@ -15,6 +15,7 @@ return new class extends Migration
             $table->dateTime('work_started_at')->nullable();
             $table->dateTime('work_completed_at')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 
